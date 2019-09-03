@@ -1,0 +1,8 @@
+python-magic
+textract
+chardet
+pycld2
+spacy
+numpy
+sklearn
+nltk
