@@ -255,7 +255,6 @@ class TextProcessor:
 
 
 if __name__ == "__main__":
-    from modules.text_miner.text_extractor import extract_text_from_file
 
     text = "{Casablanca} is a 1942 $400 American film directed by Michael Curtiz. Narrates a romantic " \
            "drama in the Moroccan city of Casablanca under the control of the Vichy government. " \
@@ -279,29 +278,14 @@ if __name__ == "__main__":
             " (GEIC) y conversó también con directivos de tres de las 13 entidades que hoy agrupa:" \
             " Segurmática, Movitel y Radiocuba."
 
-    # processor1 = TextProcessor(text)
-    # processor2 = TextProcessor(text2)
+    processor1 = TextProcessor(text)
+    processor2 = TextProcessor(text2)
 
-    # tf1 = processor1.get_bag_of_words(order='numerical')
-    # tf2 = processor2.get_bag_of_words(order='numerical')
+    tf1 = processor1.get_bag_of_words(order='numerical')
+    tf2 = processor2.get_bag_of_words(order='numerical')
 
-    # for word, frequence in tf2.items():
-    #     print(word, "----------", frequence)
+    for word, frequence in tf2.items():
+        print(word, "----------", frequence)
 
-    # for tok in processor2.get_filtered_dimensions():
-    #     print(tok)
-
-    path = "/home/josevl/Collector_Had_Staggering_Number_of_Human_Bones_1551362622.419549.txt"
-    text3 = extract_text_from_file(path)
-    processor = TextProcessor(text2)
-    tf1 = processor.get_bag_of_words(order='numerical')
-
-    normalized = processor.get_unit_vector(norm='l1', order='numerical')
-    a = 0.0
-    for word, freq in normalized.items():
-        a += float(freq)
-        print(word, "<<<------>>>", tf1[word], "<<<------>>>", freq)
-    print("\nTotal sum:", a)
-    print("Total items:", len(normalized))
-
-
+    for tok in processor2.get_filtered_dimensions():
+        print(tok)
