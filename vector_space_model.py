@@ -106,10 +106,3 @@ if __name__ == '__main__':
     print("Number of words:", v.count_features())
     print("Number of documents:", v.count_samples())
     print("List of words:", v.list_features())
-
-    matrix = v.matrix
-    # csr = v.get_csr_matrix()
-    # print(csr)
-
-    # p = v.fit_sample(sample3)
-    print("kndela al jarro")
