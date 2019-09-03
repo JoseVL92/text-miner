@@ -1,2 +1,2 @@
 # text-miner
-Utilities for text mining processing
+Utilities for text mining processing in python
