@@ -105,4 +105,3 @@ if __name__ == '__main__':
     v.remove_feature('jugada')
     print("Number of words:", v.count_features())
     print("Number of documents:", v.count_samples())
-    print("List of words:", v.list_features())

@@ -5,15 +5,12 @@ import magic
 import textract
 from chardet.universaldetector import UniversalDetector
 
-from xinthesis import exception_handler
-
 __all__ = ["get_content_type", "get_file_extensions", "get_file_encoding", "extract_text_from_file"]
 
 ALLOWED_EXTENSIONS = ("csv", "doc", "docx", "eml", "epub", "gif", "jpg", "jpeg", "json", "html", "htm",
                       "msg", "odt", "pdf", "png", "pptx", "ps", "rtf", "tiff", "txt", "xls", "xlsx")
 
 
-@exception_handler
 def get_content_type(file_path):
     """
     This function return the content type of a file
@@ -32,19 +29,16 @@ def get_content_type(file_path):
     return content_type
 
 
-@exception_handler
 def content_type_to_extensions(content_type):
     mime_type = content_type.split("; ")[0]
     return mimetypes.guess_all_extensions(mime_type)
 
 
-@exception_handler
 def get_file_extensions(file_path):
     content_type = get_content_type(file_path)
     return content_type_to_extensions(content_type)
 
 
-@exception_handler
 def get_file_encoding(file_path):
     detector = UniversalDetector()
     # for line in open(file_path, 'rb'):
@@ -61,7 +55,6 @@ def get_file_encoding(file_path):
     return detector.result["encoding"]
 
 
-@exception_handler
 def create_directory(directory_path):
     """
     This function validate that exist a directory, if not, then try to create
@@ -73,7 +66,6 @@ def create_directory(directory_path):
     return True
 
 
-@exception_handler
 def extract_text_from_file(file_path):
     extension = None
     file_name = os.path.basename(file_path)
