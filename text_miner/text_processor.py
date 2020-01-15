@@ -1,10 +1,10 @@
 from collections import Counter, OrderedDict
 
+import numpy as np
 import pycld2 as cld2
 import spacy
-import numpy as np
-from sklearn import preprocessing
 from nltk.corpus import stopwords
+from sklearn import preprocessing
 
 ISO_STANDARDS = {"639_1": 0, "639_2/t": 1, "639_2/b": 2}
 ISO_LANGUAGES = {"abkhaz": ['ab', 'abk', 'abk'], "afar": ['aa', 'aar', 'aar'],
@@ -103,13 +103,13 @@ ISO_LANGUAGES = {"abkhaz": ['ab', 'abk', 'abk'], "afar": ['aa', 'aar', 'aar'],
 
 SPACY_LANGUAGE_MAPPING = {
     # "spanish": "es_core_news_sm",
-    "spanish": "es_core_news_md",
+    "spanish": ["es_core_news_lg", "es_core_news_md", "es_core_news_sm"],
     # "english": "en_core_web_sm",
-    "english": "en_core_web_md",
-    "portuguese": "pt_core_news_sm",
-    "italian": "it_core_news_sm",
-    "french": "fr_core_news_sm",
-    "german": "de_core_news_sm"
+    "english": ["en_core_web_lg", "en_core_web_md", "en_core_web_sm"],
+    # "portuguese": "pt_core_news_sm",
+    # "italian": "it_core_news_sm",
+    # "french": "fr_core_news_sm",
+    # "german": "de_core_news_sm"
 }
 
 
@@ -162,7 +162,17 @@ class TextProcessor:
 
     def make_nlp(self, disabled_pipes=("parser", "ner", "textcat", "entity_ruler", "merge_entities")):
         lang_to_load = SPACY_LANGUAGE_MAPPING[self.lang]
-        nlp = spacy.load(lang_to_load, disable=disabled_pipes)
+        nlp = None
+        for model_name in lang_to_load:
+            try:
+                nlp = spacy.load(model_name, disable=disabled_pipes)
+                break
+            except IOError:
+                continue
+        if nlp is None:
+            raise IOError(
+                "No suitable spacy model was found for language {}, please visit https://spacy.io/models".format(
+                    self.lang))
         return nlp(self.text)
 
     def _get_tokens_property_list(self, prop_name, check_attribute=(), check_if_false=False):
