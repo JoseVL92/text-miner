@@ -22,7 +22,7 @@ class VectorSpaceModel:
         try:
             index = self.vocabulary.index(feat)
         except ValueError:
-            raise ValueError(f"Feature '{feat}' does not exist in vocabulary")
+            raise ValueError("Feature '{}' does not exist in vocabulary".format(feat))
 
         self.matrix = np.delete(self.matrix, index, axis=1)
         self.vocabulary.remove(feat)
@@ -61,7 +61,7 @@ class VectorSpaceModel:
 
     def get_vocabulary(self):
         if not self.is_valid_vocabulary():
-            raise ValueError(f"Vocabulary has repeated terms")
+            raise ValueError("Vocabulary has repeated terms")
         return self.vocabulary
 
     def is_valid_vocabulary(self):

@@ -116,9 +116,9 @@ SPACY_LANGUAGE_MAPPING = {
 class TextProcessor:
     def __init__(self, text, iso_standard="639_1", language_name=None, language_iso_code=None, preprocess=True):
         if ISO_STANDARDS.get(iso_standard) is None:
-            raise ValueError(f"ISO standard {iso_standard} not recognizable")
+            raise ValueError("ISO standard {} not recognizable".format(iso_standard))
         if language_name is not None and language_name not in ISO_LANGUAGES:
-            raise ValueError(f"Language {language_name} not recognizable")
+            raise ValueError("Language {} not recognizable".format(language_name))
         self.text = text
         self._nlp_doc = None
 
@@ -154,7 +154,7 @@ class TextProcessor:
         for key, value in ISO_LANGUAGES.items():
             if value[idx] == lang_code:
                 return key
-        raise ValueError(f"ISO language code {lang_code} not recognizable")
+        raise ValueError("ISO language code {} not recognizable".format(lang_code))
 
     def _get_lang_code_from_lang(self, language_name):
         idx = ISO_STANDARDS[self.iso_standard]
@@ -224,7 +224,7 @@ class TextProcessor:
         allowed_methods = ("alphabetical", "numerical")
         if order_method not in allowed_methods:
             all_in_or = " or ".join(allowed_methods)
-            raise ValueError(f"Wrong value of norm, {all_in_or} expected")
+            raise ValueError("Wrong value of norm, {} expected".format(all_in_or))
         ordered_dict = OrderedDict()
         if order_method == allowed_methods[0]:
             ordered_keys = sorted(dict_)

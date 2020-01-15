@@ -73,7 +73,7 @@ def extract_text_from_file(file_path):
 
     if len(extension_list) > 1:
         if extension_list[-1] not in ALLOWED_EXTENSIONS:
-            raise TypeError(f".{extension_list[-1]} extension can't be processed")
+            raise TypeError(".{} extension can't be processed".format(extension_list[-1]))
         extension = extension_list[-1]
 
     else:
@@ -84,7 +84,7 @@ def extract_text_from_file(file_path):
                 continue
             extension = ext
         if extension is None:
-            raise TypeError(f"Cannot define a valid extension for file '{file_name}'")
+            raise TypeError("Cannot define a valid extension for file '{}'".format(file_name))
 
     # encoding = get_file_encoding(file_path) or 'utf-8'
 
@@ -96,14 +96,14 @@ def extract_text_from_file(file_path):
         except UnicodeDecodeError:
             encoding = get_file_encoding(file_path)
             if encoding is None:
-                raise UnicodeError(f"Cannot define encoding for file {file_name}")
+                raise UnicodeError("Cannot define encoding for file {}".format(file_name))
             with open(file_path, encoding=encoding, errors='replace') as reader:
                 text = reader.read()
     else:
         try:
             text = textract.process(file_path, extension=extension)
         except UnicodeDecodeError:
-            raise UnicodeError(f"Cannot define encoding for file {file_name}")
+            raise UnicodeError("Cannot define encoding for file {}".format(file_name))
 
     if not isinstance(text, str):
         text = text.decode('utf-8', 'replace')
