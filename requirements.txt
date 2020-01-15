@@ -1,8 +1,8 @@
-python-magic
-textract
-chardet
-pycld2
-spacy
-numpy
-sklearn
-nltk
+python-magic==0.4.15
+textract==1.5.0
+chardet==3.0.4
+pycld2==0.41
+spacy==2.2.3
+numpy==1.18.1
+scikit-learn==0.22.1
+nltk==3.4.5
