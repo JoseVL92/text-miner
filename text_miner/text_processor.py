@@ -102,8 +102,10 @@ ISO_LANGUAGES = {"abkhaz": ['ab', 'abk', 'abk'], "afar": ['aa', 'aar', 'aar'],
                  "zhuang  chuang": ['za', 'zha', 'zha'], "zulu": ['zu', 'zul', 'zul']}
 
 SPACY_LANGUAGE_MAPPING = {
-    "spanish": "es_core_news_sm",
-    "english": "en_core_web_sm",
+    # "spanish": "es_core_news_sm",
+    "spanish": "es_core_news_md",
+    # "english": "en_core_web_sm",
+    "english": "en_core_web_md",
     "portuguese": "pt_core_news_sm",
     "italian": "it_core_news_sm",
     "french": "fr_core_news_sm",
@@ -199,8 +201,8 @@ class TextProcessor:
         attributes = ("is_stop", "is_punct", "is_quote", "is_currency", "is_space", "is_digit")
         features = self._get_tokens_property_list("lemma_", check_attribute=attributes, check_if_false=True)
 
-        # convert all features to lowercase, because spacy let capitalized words stays intact
-        # because nltk stopwords definition is more complete than spacy, here we check this
+        # Convert all features to lowercase, because spacy let capitalized words stays intact.
+        # Because nltk stopwords definition is more complete than spacy, here we check this.
         features = [f.lower() for f in features if f not in stopwords.words(self.lang)]
 
         # if self.lang == "spanish":
@@ -252,40 +254,3 @@ class TextProcessor:
         X_normalized = preprocessing.normalize(X, norm=norm)
         full = {word_list[i]: X_normalized[0, i] for i in range(features_length)}
         return full
-
-
-if __name__ == "__main__":
-
-    text = "{Casablanca} is a 1942 $400 American film directed by Michael Curtiz. Narrates a romantic " \
-           "drama in the Moroccan city of Casablanca under the control of the Vichy government. " \
-           "The film, based on the play Everybody Comes to Rick's " \
-           "(Everybody comes to Rick's Cafe), Murray Burnett and Joan Alison, " \
-           "she is starring Humphrey Bogart in the role of Rick Blaine and Ingrid Bergman as " \
-           "Ilsa Lund. The development of the film focuses on the conflict between Rick -using " \
-           "the words of one of the characters-love and virtue: Rick must choose between his " \
-           "beloved Ilsa or doing the right thing. His dilemma is no help or escape from Casablanca " \
-           "with her husband, one of the leaders of the resistance, so that it can continue its " \
-           "fight against the Nazis."
-    text2 = "El perfeccionamiento del sistema empresarial cubano es un camino emprendido ya desde hace años." \
-            " La etapa más reciente empezó en 2011, con transformaciones significativas en el funcionamiento " \
-            "de las entidades. Pese a las flexibilizaciones, la autonomía continúa siendo un tema que desata" \
-            " opiniones encontradas.En el criterio de expertos y empresarios, las libertades parecen limitarse" \
-            " en el nuevo rediseño que sitúa a las empresas bajo el “tutelaje” de Organizaciones Superiores de" \
-            " Dirección Empresarial (OSDE). ¿Para qué sirven las OSDE? ¿Hasta qué punto se han alejado de las" \
-            " funciones estatales a cargo de los ministerios? ¿Qué beneficios reportan para las empresas? " \
-            "¿Cuánto deciden? ¿Es posible dirigir sin mandatar? ¿Son moldes para todos los sectores? En busca" \
-            " de respuestas Cubadebate llegó hasta el Grupo Empresarial de la Informática y las Comunicaciones" \
-            " (GEIC) y conversó también con directivos de tres de las 13 entidades que hoy agrupa:" \
-            " Segurmática, Movitel y Radiocuba."
-
-    processor1 = TextProcessor(text)
-    processor2 = TextProcessor(text2)
-
-    tf1 = processor1.get_bag_of_words(order='numerical')
-    tf2 = processor2.get_bag_of_words(order='numerical')
-
-    for word, frequence in tf2.items():
-        print(word, "----------", frequence)
-
-    for tok in processor2.get_filtered_dimensions():
-        print(tok)

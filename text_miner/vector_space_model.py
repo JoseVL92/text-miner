@@ -92,16 +92,3 @@ class VectorSpaceModel:
     # def get_csr_matrix(self):
     #     from scipy.sparse import csr_matrix
     #     return csr_matrix(self.matrix)
-
-
-if __name__ == '__main__':
-    v = VectorSpaceModel('spanish')
-    sample1 = {'hoy': 12, 'voy': 5, 'a': 41, 'jugar': 11}
-    sample2 = {'hoy': 1, 'pierdo': 3, 'la': 124, 'jugada': 88, 'increible': 1}
-    sample3 = {'hoy': 7, 'besare': 3, 'a': 7, 'la': 3, 'increible': 12, 'mujer': 5}
-    v.add_sample('ejemplo', sample1, '1')
-    v.add_sample('ejemplo2', sample2, '2')
-    v.add_sample('ejemplo3', sample3, '3')
-    v.remove_feature('jugada')
-    print("Number of words:", v.count_features())
-    print("Number of documents:", v.count_samples())
