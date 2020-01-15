@@ -13,7 +13,7 @@ setup(
     data_files=[
         ("", ["LICENSE.txt", "README.md"])
     ],
-    install_requires=['python-magic', 'textract', 'chardet', 'pycld2', 'spacy', 'numpy', 'sklearn', 'nltk'],
+    install_requires=['python-magic', 'textract==1.5.0', 'chardet', 'pycld2', 'spacy', 'numpy', 'scikit-learn', 'nltk'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'License :: OSI Approved :: MIT License',
