@@ -113,81 +113,35 @@ SPACY_LANGUAGE_MAPPING = {
 }
 
 
-class TextProcessor:
-    def __init__(self, text, iso_standard="639_1", language_name=None, language_iso_code=None, preprocess=True):
-        if ISO_STANDARDS.get(iso_standard) is None:
-            raise ValueError("ISO standard {} not recognizable".format(iso_standard))
-        if language_name is not None and language_name not in ISO_LANGUAGES:
-            raise ValueError("Language {} not recognizable".format(language_name))
-        self.text = text
-        self._nlp_doc = None
+def detect_language(text):
+    try:
+        # text = bytes(text, 'utf-8').decode('utf-8', 'backslashreplace')
+        detected = cld2.detect(text)
+        if detected[0]:
+            lang = detected[2][0][0].lower()
+            lang_code = detected[2][0][1]
+        else:
+            lang = lang_code = None
+    except Exception as err:
+        raise Exception("TextProcessor::detect_language: " + str(err))
+    return lang, lang_code
 
-        self.iso_standard = iso_standard
-        self.lang = language_name
-        self.lang_iso_code = language_iso_code
-        if language_name is None and language_iso_code is None:
-            self.lang, self.lang_iso_code = self.detect_language(text)
-        elif language_name is None:
-            self.lang = self._get_lang_from_lang_code(language_iso_code)
-        elif language_iso_code is None:
-            self.lang_iso_code = self._get_lang_code_from_lang(language_name)
 
-        if preprocess:
-            self._nlp_doc = self.make_nlp()
-
-    @staticmethod
-    def detect_language(text):
-        try:
-            # text = bytes(text, 'utf-8').decode('utf-8', 'backslashreplace')
-            detected = cld2.detect(text)
-            if detected[0]:
-                lang = detected[2][0][0].lower()
-                lang_code = detected[2][0][1]
-            else:
-                lang = lang_code = None
-        except Exception as err:
-            raise Exception("TextProcessor::detect_language: " + str(err))
-        return lang, lang_code
-
-    def _get_lang_from_lang_code(self, lang_code):
-        idx = ISO_STANDARDS[self.iso_standard]
-        for key, value in ISO_LANGUAGES.items():
-            if value[idx] == lang_code:
-                return key
-        raise ValueError("ISO language code {} not recognizable".format(lang_code))
-
-    def _get_lang_code_from_lang(self, language_name):
-        idx = ISO_STANDARDS[self.iso_standard]
-        return ISO_LANGUAGES[language_name][idx]
-
-    def make_nlp(self, disabled_pipes=("parser", "ner", "textcat", "entity_ruler", "merge_entities")):
-        lang_to_load = SPACY_LANGUAGE_MAPPING[self.lang]
-        nlp = None
-        for model_name in lang_to_load:
-            try:
-                nlp = spacy.load(model_name, disable=disabled_pipes)
-                break
-            except IOError:
-                continue
-        if nlp is None:
-            raise IOError(
-                "No suitable spacy model was found for language {}, please visit https://spacy.io/models".format(
-                    self.lang))
-        return nlp(self.text)
+class DocumentContainer:
+    def __init__(self, document, language):
+        self.nlp_doc = document
+        self.language = language
 
     def _get_tokens_property_list(self, prop_name, check_attribute=(), check_if_false=False):
-        if self._nlp_doc is None:
-            # raise ValueError("Must execute method make_nlp first for this instance")
-            self.make_nlp()
         if check_attribute:
             if check_if_false:
-                return [getattr(tok, prop_name) for tok in self._nlp_doc if not any(
+                return [getattr(tok, prop_name) for tok in self.nlp_doc if not any(
                     [getattr(tok, attr) for attr in check_attribute]
                 )]
-            return [getattr(tok, prop_name) for tok in self._nlp_doc if any(
+            return [getattr(tok, prop_name) for tok in self.nlp_doc if any(
                 [getattr(tok, attr) for attr in check_attribute]
             )]
-        return [getattr(tok, prop_name) for tok in self._nlp_doc]
+        return [getattr(tok, prop_name) for tok in self.nlp_doc]
 
     def get_tokens(self, lowercase=True):
         return self._get_tokens_property_list("lower_" if lowercase else "text")
@@ -207,13 +161,19 @@ class TextProcessor:
     def get_emaillike_tokens(self):
         return self._get_tokens_property_list("text", check_attribute=("like_email",))
 
-    def get_filtered_dimensions(self):
-        attributes = ("is_stop", "is_punct", "is_quote", "is_currency", "is_space", "is_digit")
-        features = self._get_tokens_property_list("lemma_", check_attribute=attributes, check_if_false=True)
+    def get_filtered_dimensions(self, filter_include=(), filter_exclude=(), lemmatize=True):
+        attributes = {"is_stop", "is_punct", "is_quote", "is_currency", "is_space", "is_digit"}
+        attributes = attributes.union(filter_include)
+        attributes = list(attributes.difference(filter_exclude))
+        lemma_or_text = "lemma_" if lemmatize else "text"
+        features = self._get_tokens_property_list(lemma_or_text, check_attribute=attributes, check_if_false=True)
 
         # Convert all features to lowercase, because spacy let capitalized words stays intact.
         # Because nltk stopwords definition is more complete than spacy, here we check this.
-        features = [f.lower() for f in features if f not in stopwords.words(self.lang)]
+        if "is_stop" in attributes:
+            features = [f.lower() for f in features if f not in stopwords.words(self.language)]
+        else:
+            features = [f.lower() for f in features]
 
         # if self.lang == "spanish":
         # features = [feat for feat in features if len(feat) > 1]
@@ -264,3 +224,68 @@ class TextProcessor:
         X_normalized = preprocessing.normalize(X, norm=norm)
         full = {word_list[i]: X_normalized[0, i] for i in range(features_length)}
         return full
+
+
+class LanguageProcessor:
+    def __init__(self, language=None, language_code=None, lite_nlp=False, iso_standard="639_1"):
+        if language is None and language_code is None:
+            raise ValueError("Must specify either language or language_code")
+        if ISO_STANDARDS.get(iso_standard) is None:
+            raise ValueError("ISO standard {} not recognizable".format(iso_standard))
+        if language is not None and language not in ISO_LANGUAGES:
+            raise ValueError("Language {} not recognizable".format(language))
+
+        self.iso_standard = iso_standard
+        self.lang = language
+        self.lang_iso_code = language_code
+        if language is None:
+            self.lang = self._get_lang_from_lang_code(language_code)
+        elif language_code is None:
+            self.lang_iso_code = self._get_lang_code_from_lang(language)
+
+        disable_pipes = ("ner", "textcat", "entity_ruler", "merge_entities") if lite_nlp else ()
+        self.nlp = self.make_nlp(remove_pipes=disable_pipes)
+
+    def __call__(self, text, disable_pipes=()):
+        with self.nlp.disable_pipes(*disable_pipes):
+            document = self.nlp(text)
+            return DocumentContainer(document, self.lang)
+
+    def _get_lang_from_lang_code(self, lang_code):
+        idx = ISO_STANDARDS[self.iso_standard]
+        for key, value in ISO_LANGUAGES.items():
+            if value[idx] == lang_code:
+                return key
+        raise ValueError("ISO language code {} not recognizable".format(lang_code))
+
+    def _get_lang_code_from_lang(self, language_name):
+        idx = ISO_STANDARDS[self.iso_standard]
+        return ISO_LANGUAGES[language_name][idx]
+
+    def make_nlp(self, add_pipes=(), remove_pipes=()):
+        lang_to_load = SPACY_LANGUAGE_MAPPING[self.lang]
+        nlp = None
+        for model_name in lang_to_load:
+            try:
+                nlp = spacy.load(model_name)
+                break
+            except IOError:
+                continue
+        if nlp is None:
+            raise IOError(
+                "No suitable spacy model was found for language {}, please visit https://spacy.io/models".format(
+                    self.lang))
+        if add_pipes is not None and len(add_pipes) > 0:
+            for pipe in add_pipes:
+                if callable(pipe):
+                    nlp.add_pipe(pipe)
+                else:
+                    try:
+                        nlp.add_pipe(**pipe)
+                    except:
+                        continue
+        if remove_pipes is not None and len(remove_pipes) > 0:
+            for pipe in remove_pipes:
+                nlp.remove_pipe(pipe)
+        return nlp
+

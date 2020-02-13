@@ -1,0 +1,5 @@
+.venv
+/tests
+/build
+/dist
+/text_miner.egg-info
