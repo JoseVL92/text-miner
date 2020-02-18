@@ -128,9 +128,19 @@ def detect_language(text):
 
 
 class DocumentContainer:
-    def __init__(self, document, language):
+    def __init__(self, document, language=None, iso_standard="639_1"):
         self.nlp_doc = document
         self.language = language
+        if not self.language:
+            self.language = self._get_lang_from_lang_code(self.nlp_doc.lang)
+        self.iso_standard = iso_standard
+
+    def _get_lang_from_lang_code(self, lang_code):
+        idx = ISO_STANDARDS[self.iso_standard]
+        for key, value in ISO_LANGUAGES.items():
+            if value[idx] == lang_code:
+                return key
+        raise ValueError("ISO language code {} not recognizable".format(lang_code))
 
     def _get_tokens_property_list(self, prop_name, check_attribute=(), check_if_false=False):
         if check_attribute:
@@ -249,7 +259,7 @@ class LanguageProcessor:
     def __call__(self, text, disable_pipes=()):
         with self.nlp.disable_pipes(*disable_pipes):
             document = self.nlp(text)
-            return DocumentContainer(document, self.lang)
+            return DocumentContainer(document, self.lang, self.iso_standard)
 
     def _get_lang_from_lang_code(self, lang_code):
         idx = ISO_STANDARDS[self.iso_standard]
