@@ -70,9 +70,9 @@ class VectorSpaceModel:
 
     def get_model(self):
         """
-        Retorna el modelo contruido en una tupla (X,y). Donde la X es una matriz de distribucion
-        de frecuencias por documentos, columnas por filas respectiuvamente; la y es un vector que
-        contiene el valor cofificado de la clase asociada a cada documento respectivamente.
+        Retorna el modelo construido en una tupla (X,y). Donde la X es una matriz de distribucion
+        de frecuencias por documentos, columnas por filas respectivamente; la y es un vector que
+        contiene el valor codificado de la clase asociada a cada documento respectivamente.
         """
         return self.matrix, np.array(self.classes)
 

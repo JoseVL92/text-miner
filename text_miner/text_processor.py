@@ -142,55 +142,86 @@ class DocumentContainer:
                 return key
         raise ValueError("ISO language code {} not recognizable".format(lang_code))
 
-    def _get_tokens_property_list(self, prop_name, check_attribute=(), check_if_false=False):
-        if check_attribute:
-            if check_if_false:
-                return [getattr(tok, prop_name) for tok in self.nlp_doc if not any(
-                    [getattr(tok, attr) for attr in check_attribute]
-                )]
-            return [getattr(tok, prop_name) for tok in self.nlp_doc if any(
-                [getattr(tok, attr) for attr in check_attribute]
-            )]
-        return [getattr(tok, prop_name) for tok in self.nlp_doc]
+    def get_tokens_property_list(self, prop_names, check_attributes=(), check_if_false=False):
+        attr_list = []
+        for tok in self.nlp_doc:
+            if check_attributes:
+                if check_if_false:
+                    if not any([getattr(tok, attr) for attr in check_attributes]):
+                        attr_list.append([getattr(tok, name) for name in prop_names])
+                else:
+                    if any([getattr(tok, attr) for attr in check_attributes]):
+                        attr_list.append([getattr(tok, name) for name in prop_names])
+            else:
+                attr_list.append([getattr(tok, name) for name in prop_names])
+        return attr_list
+
+        # if check_attributes:
+        #     if check_if_false:
+        #         return [getattr(tok, prop_name) for tok in self.nlp_doc if not any(
+        #             [getattr(tok, attr) for attr in check_attributes]
+        #         )]
+        #     return [getattr(tok, prop_name) for tok in self.nlp_doc if any(
+        #         [getattr(tok, attr) for attr in check_attributes]
+        #     )]
+        # return [getattr(tok, prop_name) for tok in self.nlp_doc]
 
     def get_tokens(self, lowercase=True):
-        return self._get_tokens_property_list("lower_" if lowercase else "text")
+        return self.get_tokens_property_list(["lower_"] if lowercase else ["text"])
 
     def get_lemmas(self):
-        return self._get_tokens_property_list("lemma_")
+        return self.get_tokens_property_list(["lemma_"])
 
     def get_numerical_tokens(self):
-        return self._get_tokens_property_list("text", check_attribute=("is_digit",))
+        return self.get_tokens_property_list(["text"], check_attributes=("is_digit",))
 
     def get_alpha_tokens(self, lowercase=True):
-        return self._get_tokens_property_list("lower_" if lowercase else "text", check_attribute=("is_alpha",))
+        return self.get_tokens_property_list(["lower_"] if lowercase else ["text"], check_attributes=("is_alpha",))
 
     def get_urllike_tokens(self):
-        return self._get_tokens_property_list("text", check_attribute=("like_url",))
+        return self.get_tokens_property_list(["text"], check_attributes=("like_url",))
 
     def get_emaillike_tokens(self):
-        return self._get_tokens_property_list("text", check_attribute=("like_email",))
+        return self.get_tokens_property_list(["text"], check_attributes=("like_email",))
 
-    def get_filtered_dimensions(self, filter_include=(), filter_exclude=(), lemmatize=True):
+    def get_filtered_dimensions(self, properties=None, filter_include=(), filter_exclude=(), flatten=False):
         attributes = {"is_stop", "is_punct", "is_quote", "is_currency", "is_space", "is_digit"}
         attributes = attributes.union(filter_include)
         attributes = list(attributes.difference(filter_exclude))
-        lemma_or_text = "lemma_" if lemmatize else "text"
-        features = self._get_tokens_property_list(lemma_or_text, check_attribute=attributes, check_if_false=True)
+        # convert 'properties' in a list of attributes
+        if properties is None:
+            properties = ['lemma_']
+        elif isinstance(properties, str):
+            properties = [properties]
+        elif isinstance(properties, tuple):
+            properties = list(properties)
+        if len(properties) == 0:
+            raise ValueError("Should be at least one property to return")
+        if len(properties) > 1 and flatten:
+            raise AttributeError("'flatten' property may be True only when there is one single property to return")
 
+        # always add 'text' if verifying stop words
+        if "is_stop" in attributes:
+            properties.append('text')
+        features = self.get_tokens_property_list(properties, check_attributes=attributes, check_if_false=True)
         # Convert all features to lowercase, because spacy let capitalized words stays intact.
         # Because nltk stopwords definition is more complete than spacy, here we check this.
         if "is_stop" in attributes:
-            features = [f.lower() for f in features if f not in stopwords.words(self.language)]
-        else:
-            features = [f.lower() for f in features]
+            features = [f[:-1] for f in features if f[-1] not in stopwords.words(self.language)]
+
+        if flatten:
+            features = [f[0] for f in features]
 
         # if self.lang == "spanish":
         # features = [feat for feat in features if len(feat) > 1]
         return features
 
-    def get_bag_of_words(self, order='numerical'):
-        cleaned_features = self.get_filtered_dimensions()
+    def get_bag_of_words(self, order='numerical', **to_filter_kwargs):
+        if 'properties' in to_filter_kwargs and not isinstance(to_filter_kwargs['properties'], str) and len(
+                to_filter_kwargs['properties']) > 1:
+            raise ValueError('Must return only one token property')
+        to_filter_kwargs['flatten'] = True
+        cleaned_features = self.get_filtered_dimensions(**to_filter_kwargs)
         # tf = {}
         # for feature in cleaned_features:
         #     tf[feature] = tf.get(feature, 0) + 1
@@ -214,10 +245,10 @@ class DocumentContainer:
             ordered_dict[key] = dict_[key]
         return ordered_dict
 
-    def get_unit_vector(self, norm='l2', order='numerical'):
+    def get_unit_vector(self, norm='l2', order='numerical', **token_kwargs):
         if norm not in ('l1', 'l2'):
             raise ValueError("Wrong value of norm, 'l1' or 'l2' expected")
-        bog = self.get_bag_of_words(order=order)
+        bog = self.get_bag_of_words(order=order, **token_kwargs)
         word_list = []
         values_list = []
         if type(bog) == Counter:
@@ -228,16 +259,16 @@ class DocumentContainer:
             for word, frequency in bog.items():
                 word_list.append(word)
                 values_list.append(frequency)
-        X = np.asarray([values_list], dtype=np.float)
+        x = np.asarray([values_list], dtype=np.float)
         # X.shape is a tuple of shape (num_elements_in_array, num_subelements_inside_each_element)
-        features_length = X.shape[1]
-        X_normalized = preprocessing.normalize(X, norm=norm)
-        full = {word_list[i]: X_normalized[0, i] for i in range(features_length)}
+        features_length = x.shape[1]
+        x_normalized = preprocessing.normalize(x, norm=norm)
+        full = {word_list[i]: x_normalized[0, i] for i in range(features_length)}
         return full
 
 
 class LanguageProcessor:
-    def __init__(self, language=None, language_code=None, lite_nlp=False, iso_standard="639_1"):
+    def __init__(self, language=None, language_code=None, lite_nlp=False, lite_model=True, iso_standard="639_1"):
         if language is None and language_code is None:
             raise ValueError("Must specify either language or language_code")
         if ISO_STANDARDS.get(iso_standard) is None:
@@ -254,7 +285,7 @@ class LanguageProcessor:
             self.lang_iso_code = self._get_lang_code_from_lang(language)
 
         disable_pipes = ("ner", "textcat", "entity_ruler", "merge_entities") if lite_nlp else ()
-        self.nlp = self.make_nlp(remove_pipes=disable_pipes)
+        self.nlp = self.make_nlp(remove_pipes=disable_pipes, lite_model=lite_model)
 
     def __call__(self, text, disable_pipes=()):
         with self.nlp.disable_pipes(*disable_pipes):
@@ -272,9 +303,11 @@ class LanguageProcessor:
         idx = ISO_STANDARDS[self.iso_standard]
         return ISO_LANGUAGES[language_name][idx]
 
-    def make_nlp(self, add_pipes=(), remove_pipes=()):
+    def make_nlp(self, add_pipes=(), remove_pipes=(), lite_model=True):
         lang_to_load = SPACY_LANGUAGE_MAPPING[self.lang]
         nlp = None
+        if lite_model:
+            lang_to_load = lang_to_load[::-1]
         for model_name in lang_to_load:
             try:
                 nlp = spacy.load(model_name)
@@ -298,4 +331,3 @@ class LanguageProcessor:
             for pipe in remove_pipes:
                 nlp.remove_pipe(pipe)
         return nlp
-
