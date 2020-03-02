@@ -268,7 +268,7 @@ class DocumentContainer:
 
 
 class LanguageProcessor:
-    def __init__(self, language=None, language_code=None, lite_nlp=False, lite_model=True, iso_standard="639_1"):
+    def __init__(self, language=None, language_code=None, light_model=True, iso_standard="639_1"):
         if language is None and language_code is None:
             raise ValueError("Must specify either language or language_code")
         if ISO_STANDARDS.get(iso_standard) is None:
@@ -284,8 +284,8 @@ class LanguageProcessor:
         elif language_code is None:
             self.lang_iso_code = self._get_lang_code_from_lang(language)
 
-        disable_pipes = ("ner", "textcat", "entity_ruler", "merge_entities") if lite_nlp else ()
-        self.nlp = self.make_nlp(remove_pipes=disable_pipes, lite_model=lite_model)
+        # disable_pipes = ("ner", "textcat", "entity_ruler", "merge_entities") if lite_nlp else ()
+        self.nlp = self.make_nlp(light_model=light_model)
 
     def __call__(self, text, disable_pipes=()):
         with self.nlp.disable_pipes(*disable_pipes):
@@ -303,10 +303,10 @@ class LanguageProcessor:
         idx = ISO_STANDARDS[self.iso_standard]
         return ISO_LANGUAGES[language_name][idx]
 
-    def make_nlp(self, add_pipes=(), remove_pipes=(), lite_model=True):
+    def make_nlp(self, add_pipes=(), remove_pipes=(), light_model=True):
         lang_to_load = SPACY_LANGUAGE_MAPPING[self.lang]
         nlp = None
-        if lite_model:
+        if light_model:
             lang_to_load = lang_to_load[::-1]
         for model_name in lang_to_load:
             try:
