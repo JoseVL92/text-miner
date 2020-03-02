@@ -5,12 +5,21 @@ import numpy as np
 
 
 class VectorSpaceModel:
-    def __init__(self, lang, matrix=None, samples_id=None, vocabulary=None):
-        self.language = lang
+    def __init__(self, *, matrix=None, samples_id=None, vocabulary=None, classes=None):
         self.matrix = matrix or np.array([[]])
-        self.classes = []
+        self.classes = classes or []
         self.vocabulary = vocabulary or []
         self.samples_id = samples_id or []
+
+        if vocabulary:
+            self.get_vocabulary()
+        if samples_id and classes:
+            if len(samples_id) != len(classes):
+                raise ValueError("Samples list and classes list must have the same size")
+        if matrix and samples_id:
+            self.count_samples()
+        if matrix and vocabulary:
+            self.count_features()
 
     def add_features(self, feats):
         for feat in feats:
