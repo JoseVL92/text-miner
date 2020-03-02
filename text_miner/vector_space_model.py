@@ -1,3 +1,6 @@
+import os
+import pickle
+
 import numpy as np
 
 
@@ -28,6 +31,8 @@ class VectorSpaceModel:
         self.vocabulary.remove(feat)
 
     def add_sample(self, sample_id, sample_vector, class_name):
+        # if sample_id in self.samples_id:
+        #     raise ValueError("Vector with ID {} is already present in this VSM")
         self.add_features(list(sample_vector.keys()))
         sample_as_array = np.zeros((1, len(self.vocabulary)))
 
@@ -89,6 +94,63 @@ class VectorSpaceModel:
 
         return np_sample
 
-    # def get_csr_matrix(self):
-    #     from scipy.sparse import csr_matrix
-    #     return csr_matrix(self.matrix)
+    def save_matrix(self, file_path):
+        try:
+            with open(file_path, 'wb') as matrix_file:
+                np.save(matrix_file, self.matrix)
+        except:
+            np.save(file_path, self.matrix)
+
+    def load_matrix(self, file_path):
+        self.matrix = np.load(file_path)
+
+    def save_classes(self, file_path):
+        with open(file_path, 'wb') as classes_file:
+            pickle.dump(self.classes, classes_file)
+
+    def load_classes(self, file_path):
+        self.classes = pickle.load(file_path)
+
+    def save_samples_id(self, file_path):
+        with open(file_path, 'wb') as samples_file:
+            pickle.dump(self.samples_id, samples_file)
+
+    def load_samples_id(self, file_path):
+        self.samples_id = pickle.load(file_path)
+
+    def save_vocabulary(self, file_path):
+        with open(file_path, 'wb') as vocab_file:
+            pickle.dump(self.vocabulary, vocab_file)
+
+    def load_vocabulary(self, file_path):
+        self.vocabulary = pickle.load(file_path)
+
+    def save_vsm(self, dir_path, matrix_name='matrix.vsm.npy', vocabulary_name='vocabulary.vsm',
+                 classes_name='classes.vsm', samples_id_name='samples.vsm'):
+        if not os.path.isdir(dir_path):
+            raise ValueError("{} does not exist or is not a directory".format(dir_path))
+        self.save_matrix(os.path.join(dir_path, matrix_name))
+        self.save_classes(os.path.join(dir_path, classes_name))
+        self.save_samples_id(os.path.join(dir_path, samples_id_name))
+        self.save_vocabulary(os.path.join(dir_path, vocabulary_name))
+
+    def load_vsm(self, dir_path, matrix_name='matrix.vsm.npy', vocabulary_name='vocabulary.vsm',
+                 classes_name='classes.vsm', samples_id_name='samples.vsm'):
+        if not os.path.isdir(dir_path):
+            raise ValueError("{} does not exist or is not a directory".format(dir_path))
+        matrix_path = os.path.join(dir_path, matrix_name)
+        classes_path = os.path.join(dir_path, classes_name)
+        samples_path = os.path.join(dir_path, samples_id_name)
+        vocab_path = os.path.join(dir_path, vocabulary_name)
+        paths = (matrix_path, classes_path, samples_path, vocab_path)
+        for p in paths:
+            if not os.path.isfile(p):
+                raise OSError("{} is not a file".format(p))
+        self.load_matrix(matrix_path)
+        self.load_classes(classes_path)
+        self.load_samples_id(samples_path)
+        self.load_vocabulary(vocab_path)
+
+# def get_csr_matrix(self):
+#     from scipy.sparse import csr_matrix
+#     return csr_matrix(self.matrix)
