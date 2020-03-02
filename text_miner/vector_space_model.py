@@ -109,21 +109,24 @@ class VectorSpaceModel:
             pickle.dump(self.classes, classes_file)
 
     def load_classes(self, file_path):
-        self.classes = pickle.load(file_path)
+        with open(file_path, 'rb') as f:
+            self.classes = pickle.load(f)
 
     def save_samples_id(self, file_path):
         with open(file_path, 'wb') as samples_file:
             pickle.dump(self.samples_id, samples_file)
 
     def load_samples_id(self, file_path):
-        self.samples_id = pickle.load(file_path)
+        with open(file_path, 'rb') as f:
+            self.samples_id = pickle.load(f)
 
     def save_vocabulary(self, file_path):
         with open(file_path, 'wb') as vocab_file:
             pickle.dump(self.vocabulary, vocab_file)
 
     def load_vocabulary(self, file_path):
-        self.vocabulary = pickle.load(file_path)
+        with open(file_path, 'rb') as f:
+            self.vocabulary = pickle.load(f)
 
     def save_vsm(self, dir_path, matrix_name='matrix.vsm.npy', vocabulary_name='vocabulary.vsm',
                  classes_name='classes.vsm', samples_id_name='samples.vsm'):
