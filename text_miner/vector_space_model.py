@@ -2,11 +2,12 @@ import os
 import pickle
 
 import numpy as np
+from scipy import sparse
 
 
 class VectorSpaceModel:
     def __init__(self, *, matrix=None, samples_id=None, vocabulary=None, classes=None):
-        self.matrix = matrix or np.array([[]])
+        self.matrix = self._set_matrix_to_coo(matrix)
         self.classes = classes or []
         self.vocabulary = vocabulary or []
         self.samples_id = samples_id or []
@@ -21,47 +22,98 @@ class VectorSpaceModel:
         if matrix and vocabulary:
             self.count_features()
 
+    @staticmethod
+    def _set_matrix_to_coo(matrix):
+        if isinstance(matrix, sparse.coo_matrix):
+            return matrix
+        elif isinstance(matrix, sparse.spmatrix):
+            return matrix.tocoo()
+        elif isinstance(matrix, np.ndarray):
+            return sparse.coo_matrix(matrix)
+        elif matrix is None:
+            return sparse.coo_matrix(np.array([[]]))
+        else:
+            return None
+
     def add_features(self, feats):
-        for feat in feats:
-            if feat not in self.vocabulary:
-                # vocab_index = len(self.vocabulary)
-                self.vocabulary.append(feat)
-                if self.matrix.size > 0:
-                    to_add = np.zeros((len(self.samples_id), 1))
-                    self.matrix = np.append(self.matrix, to_add, axis=1)
+        new_feats = set(feats).difference(self.vocabulary)
+        self.vocabulary.extend(new_feats)
+        if self.matrix.shape != (1, 0):
+            self.matrix.resize(self.matrix.shape[0], len(self.vocabulary))
+            assert len(self.vocabulary) == self.matrix.shape[
+                1], "vocabulary does not match with matrix correspondent dimension"
 
-    def remove_feature(self, feat):
-        try:
-            index = self.vocabulary.index(feat)
-        except ValueError:
-            raise ValueError("Feature '{}' does not exist in vocabulary".format(feat))
+    def remove_features(self, feats, no_mean_only=False):
+        feats_to_remove = set(feats)
+        feats_to_remove_indexes = []
+        for f in feats_to_remove:
+            try:
+                feats_to_remove_indexes.append(self.vocabulary.index(f))
+            except ValueError:
+                continue
+        all_vocab_indexes = range(len(self.vocabulary))
+        remaining_feats_indexes = set(all_vocab_indexes).difference(feats_to_remove_indexes)
+        remaining_feats_indexes = list(remaining_feats_indexes)
+        # CSC for column slicing
+        as_csc = self.matrix.tocsc()
+        if no_mean_only:
+            idx = 0
+            while idx < len(feats_to_remove_indexes):
+                tester = as_csc[:, [feats_to_remove_indexes[idx]]]
+                if tester.max() > 0:
+                    remaining_feats_indexes.append(feats_to_remove_indexes.pop(idx))
+                else:
+                    idx += 1
+        remaining_feats_indexes = sorted(remaining_feats_indexes)
 
-        self.matrix = np.delete(self.matrix, index, axis=1)
-        self.vocabulary.remove(feat)
+        new_matrix = as_csc[:, remaining_feats_indexes]
+        self.matrix = new_matrix.tocoo()
+        for idx2 in feats_to_remove_indexes:
+            self.vocabulary.pop(idx2)
+        assert len(self.vocabulary) == self.matrix.shape[
+            1], "vocabulary does not match with matrix correspondent dimension"
 
     def add_sample(self, sample_id, sample_vector, class_name):
-        # if sample_id in self.samples_id:
-        #     raise ValueError("Vector with ID {} is already present in this VSM")
+        if sample_id in self.samples_id:
+            raise ValueError("Vector with ID {} is already present in this VSM")
         self.add_features(list(sample_vector.keys()))
-        sample_as_array = np.zeros((1, len(self.vocabulary)))
+
+        data = []
+        row = [0]*len(sample_vector)
+        col = []
 
         for word, count in sample_vector.items():
             word_index = self.vocabulary.index(word)
-            sample_as_array[0, word_index] = count
+            data.append(count)
+            col.append(word_index)
 
+        sparsed_sample = sparse.coo_matrix((data, (row, col)))
+        if self.matrix.shape == (1, 0):
+            self.matrix = sparsed_sample
+        else:
+            self.matrix = sparse.vstack([self.matrix, sparsed_sample])
         self.samples_id.append(sample_id)
         self.classes.append(class_name)
 
-        if self.matrix.size == 0:
-            self.matrix = sample_as_array
-        else:
-            self.matrix = np.append(self.matrix, sample_as_array, axis=0)
+    def remove_samples(self, samples_id_list):
+        samples_to_remove = set(samples_id_list)
+        samples_to_remove_indexes = []
+        for f in samples_to_remove:
+            try:
+                samples_to_remove_indexes.append(self.samples_id.index(f))
+            except ValueError:
+                continue
+        all_samples_indexes = range(len(self.samples_id))
+        remaining_samples_indexes = set(all_samples_indexes).difference(samples_to_remove_indexes)
+        remaining_samples_indexes = list(remaining_samples_indexes)
 
-    def remove_sample(self, sample_id):
-        index = self.samples_id.index(sample_id)
-        self.matrix = np.delete(self.matrix, index, axis=0)
-        self.samples_id.remove(sample_id)
-        self.classes.pop(index)
+        # CSR for column slicing
+        as_csr = self.matrix.tocsr()
+        new_matrix = as_csr[remaining_samples_indexes, :]
+        self.matrix = new_matrix.tocoo()
+        for idx in samples_to_remove_indexes:
+            self.samples_id.pop(idx)
+            self.classes.pop(idx)
 
     def count_features(self):
         assert len(self.vocabulary) == self.matrix.shape[
@@ -80,38 +132,57 @@ class VectorSpaceModel:
 
     def is_valid_vocabulary(self):
         vocab_set = set(self.vocabulary)
-        return len(vocab_set) == len(self.vocabulary)
+        return len(vocab_set) == self.count_features()
 
-    def get_model(self):
+    def get_model(self, matrix_output_format='csr'):
         """
         Retorna el modelo construido en una tupla (X,y). Donde la X es una matriz de distribucion
         de frecuencias por documentos, columnas por filas respectivamente; la y es un vector que
         contiene el valor codificado de la clase asociada a cada documento respectivamente.
         """
-        return self.matrix, np.array(self.classes)
+        if matrix_output_format not in ('csr', 'coo', 'array'):
+            raise ValueError("Format not valid: " + str(matrix_output_format))
+        if matrix_output_format == 'coo':
+            return self.matrix, np.array(self.classes)
+        if matrix_output_format == 'csr':
+            return self.matrix.tocsr(), np.array(self.classes)
+        return self.matrix.toarray(), np.array(self.classes)
 
-    def fit_sample(self, sample_vector):
+    def transform(self, sample_vector, output_format='csr'):
         # np_sample = np.zeros((1, self.matrix.shape[1]))
-        np_sample = np.zeros((1, len(self.vocabulary)))
+        # np_sample = np.zeros((1, len(self.vocabulary)))
+        if output_format not in ('csr', 'coo', 'array'):
+            raise ValueError("Format not valid: " + str(output_format))
+        data = []
+        row = []
+        col = []
 
         for word, count in sample_vector.items():
             try:
                 word_index = self.vocabulary.index(word)
-                np_sample[0, word_index] = count
+                data.append(count)
+                col.append(word_index)
+                row.append(0)
+                # np_sample[0, word_index] = count
             except ValueError:
                 continue
-
-        return np_sample
+        if output_format == 'csr':
+            output = sparse.csr_matrix((data, (row, col)), shape=(1, self.matrix.shape[1]))
+        else:
+            output = sparse.coo_matrix((data, (row, col)), shape=(1, self.matrix.shape[1]))
+            if output_format == 'array':
+                output = output.toarray()
+        return output
 
     def save_matrix(self, file_path):
         try:
             with open(file_path, 'wb') as matrix_file:
-                np.save(matrix_file, self.matrix)
+                sparse.save_npz(matrix_file, self.matrix)
         except:
-            np.save(file_path, self.matrix)
+            sparse.save_npz(file_path, self.matrix)
 
     def load_matrix(self, file_path):
-        self.matrix = np.load(file_path)
+        self.matrix = sparse.load_npz(file_path)
 
     def save_classes(self, file_path):
         with open(file_path, 'wb') as classes_file:
@@ -162,7 +233,3 @@ class VectorSpaceModel:
         self.load_classes(classes_path)
         self.load_samples_id(samples_path)
         self.load_vocabulary(vocab_path)
-
-# def get_csr_matrix(self):
-#     from scipy.sparse import csr_matrix
-#     return csr_matrix(self.matrix)
