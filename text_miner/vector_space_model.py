@@ -87,7 +87,7 @@ class VectorSpaceModel:
             data.append(count)
             col.append(word_index)
 
-        sparsed_sample = sparse.coo_matrix((data, (row, col)))
+        sparsed_sample = sparse.coo_matrix((data, (row, col)), shape=(1, len(self.vocabulary)))
         if self.matrix.shape == (1, 0):
             self.matrix = sparsed_sample
         else:
@@ -167,9 +167,9 @@ class VectorSpaceModel:
             except ValueError:
                 continue
         if output_format == 'csr':
-            output = sparse.csr_matrix((data, (row, col)), shape=(1, self.matrix.shape[1]))
+            output = sparse.csr_matrix((data, (row, col)), shape=(1, len(self.vocabulary)))
         else:
-            output = sparse.coo_matrix((data, (row, col)), shape=(1, self.matrix.shape[1]))
+            output = sparse.coo_matrix((data, (row, col)), shape=(1, len(self.vocabulary)))
             if output_format == 'array':
                 output = output.toarray()
         return output
@@ -208,7 +208,7 @@ class VectorSpaceModel:
         with open(file_path, 'rb') as f:
             self.vocabulary = pickle.load(f)
 
-    def save_vsm(self, dir_path, matrix_name='matrix.vsm.npy', vocabulary_name='vocabulary.vsm',
+    def save_vsm(self, dir_path, matrix_name='matrix.vsm.npz', vocabulary_name='vocabulary.vsm',
                  classes_name='classes.vsm', samples_id_name='samples.vsm'):
         if not os.path.isdir(dir_path):
             raise ValueError("{} does not exist or is not a directory".format(dir_path))
@@ -217,7 +217,7 @@ class VectorSpaceModel:
         self.save_samples_id(os.path.join(dir_path, samples_id_name))
         self.save_vocabulary(os.path.join(dir_path, vocabulary_name))
 
-    def load_vsm(self, dir_path, matrix_name='matrix.vsm.npy', vocabulary_name='vocabulary.vsm',
+    def load_vsm(self, dir_path, matrix_name='matrix.vsm.npz', vocabulary_name='vocabulary.vsm',
                  classes_name='classes.vsm', samples_id_name='samples.vsm'):
         if not os.path.isdir(dir_path):
             raise ValueError("{} does not exist or is not a directory".format(dir_path))
