@@ -150,9 +150,12 @@ class VectorSpaceModel:
             return self.matrix.tocsr(), np.array(self.classes)
         return self.matrix.toarray(), np.array(self.classes)
 
-    def transform(self, sample_vector, output_format='csr'):
+    def transform(self, sample_vector, output_format='csr', vocabulary=None):
         # np_sample = np.zeros((1, self.matrix.shape[1]))
         # np_sample = np.zeros((1, len(self.vocabulary)))
+        if vocabulary is None:
+            vocabulary = self.get_vocabulary()
+        vocabulary = list(set(vocabulary))
         if output_format not in ('csr', 'coo', 'array'):
             raise ValueError("Format not valid: " + str(output_format))
         data = []
@@ -161,7 +164,7 @@ class VectorSpaceModel:
 
         for word, count in sample_vector.items():
             try:
-                word_index = self.vocabulary.index(word)
+                word_index = vocabulary.index(word)
                 data.append(count)
                 col.append(word_index)
                 row.append(0)
@@ -169,9 +172,9 @@ class VectorSpaceModel:
             except ValueError:
                 continue
         if output_format == 'csr':
-            output = sparse.csr_matrix((data, (row, col)), shape=(1, len(self.vocabulary)))
+            output = sparse.csr_matrix((data, (row, col)), shape=(1, len(vocabulary)))
         else:
-            output = sparse.coo_matrix((data, (row, col)), shape=(1, len(self.vocabulary)))
+            output = sparse.coo_matrix((data, (row, col)), shape=(1, len(vocabulary)))
             if output_format == 'array':
                 output = output.toarray()
         return output
