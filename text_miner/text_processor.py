@@ -117,9 +117,11 @@ def detect_language(text):
     try:
         # text = bytes(text, 'utf-8').decode('utf-8', 'backslashreplace')
         detected = cld2.detect(text)
+        # Example of 'detected'
+        # (True, 75266, (('SPANISH', 'es', 90, 507.0), ('ENGLISH', 'en', 9, 541.0), ('Unknown', 'un', 0, 0.0)))
         if detected[0]:
             lang = detected[2][0][0].lower()
-            lang_code = detected[2][0][1]
+            lang_code = detected[2][0][1]  # lang_code is always in ISO 639_1 standard
         else:
             lang = lang_code = None
     except Exception as err:
@@ -142,29 +144,29 @@ class DocumentContainer:
                 return key
         raise ValueError("ISO language code {} not recognizable".format(lang_code))
 
+    @staticmethod
+    def _get_tkn_attrs(token, attrs_names):
+        attr_tkn_list = []
+        for name in attrs_names:
+            if name == 'lemma_':
+                attr_tkn_list.append(token.lemma_ if token.lemma_ != "-PRON-" else token.lower_)
+            else:
+                attr_tkn_list.append(getattr(token, name))
+        return attr_tkn_list
+
     def get_tokens_property_list(self, prop_names, check_attributes=(), check_if_false=False):
         attr_list = []
         for tok in self.nlp_doc:
+            valid_token = True
             if check_attributes:
-                if check_if_false:
-                    if not any([getattr(tok, attr) for attr in check_attributes]):
-                        attr_list.append([getattr(tok, name) for name in prop_names])
+                if any([getattr(tok, attr) for attr in check_attributes]):
+                    valid_token = not check_if_false
                 else:
-                    if any([getattr(tok, attr) for attr in check_attributes]):
-                        attr_list.append([getattr(tok, name) for name in prop_names])
-            else:
-                attr_list.append([getattr(tok, name) for name in prop_names])
+                    valid_token = check_if_false
+            if valid_token:
+                attr_list.append(self._get_tkn_attrs(tok, prop_names))
+                # attr_list.append([getattr(tok, name) for name in prop_names])
         return attr_list
-
-        # if check_attributes:
-        #     if check_if_false:
-        #         return [getattr(tok, prop_name) for tok in self.nlp_doc if not any(
-        #             [getattr(tok, attr) for attr in check_attributes]
-        #         )]
-        #     return [getattr(tok, prop_name) for tok in self.nlp_doc if any(
-        #         [getattr(tok, attr) for attr in check_attributes]
-        #     )]
-        # return [getattr(tok, prop_name) for tok in self.nlp_doc]
 
     def get_tokens(self, lowercase=True):
         return self.get_tokens_property_list(["lower_"] if lowercase else ["text"])

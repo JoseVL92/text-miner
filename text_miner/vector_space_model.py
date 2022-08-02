@@ -13,7 +13,9 @@ class VectorSpaceModel:
         self.samples_id = samples_id or []
 
         if vocabulary:
-            self.get_vocabulary()
+            vocab_set = set(vocabulary)
+            if len(vocab_set) != len(vocabulary):
+                raise ValueError("Vocabulary has repeated terms")
         if samples_id and classes:
             if len(samples_id) != len(classes):
                 raise ValueError("Samples list and classes list must have the same size")
@@ -75,7 +77,7 @@ class VectorSpaceModel:
 
     def add_sample(self, sample_id, sample_vector, class_name):
         if sample_id in self.samples_id:
-            raise ValueError("Vector with ID {} is already present in this VSM")
+            raise ValueError("Vector with ID {} is already present in this VSM".format(sample_id))
         self.add_features(list(sample_vector.keys()))
 
         data = []
