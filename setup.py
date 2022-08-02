@@ -2,11 +2,11 @@ from setuptools import setup, find_packages
 
 setup(
     name="text_miner",
-    version=0.1,
+    version='0.1.1',
     author="Jose Alberto Varona Labrada",
     author_email="jovalab92@gmail.com",
     description="Full text mining utility for extract and pre-process text from documents, incluiding language detection",
-    python_requires=">=3.5",
+    python_requires=">=3.6",
     url="https://github.com/JoseVL92/text-miner",
     download_url="https://github.com/JoseVL92/text-miner/archive/v_01.tar.gz",
     packages=find_packages(),
@@ -23,5 +23,5 @@ setup(
         'Programming Language :: Python :: 3.7',
     ],
     license='MIT',
-    keywords=['text mining', 'tf-idf']
+    keywords=['text mining', 'vectorization', 'text extraction']
 )
