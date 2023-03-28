@@ -298,9 +298,12 @@ class LanguageProcessor:
         :param enable_pipes: The name(s) of the pipes to enable - all others will be disabled
         :return: DocumentContainer
         """
-        with self.nlp.select_pipes(disable=disable_pipes, enable=enable_pipes):
-            document = self.nlp(text)
-            return DocumentContainer(document, self.lang, self.iso_standard)
+        if disable_pipes or enable_pipes:
+            with self.nlp.select_pipes(disable=disable_pipes, enable=enable_pipes):
+                document = self.nlp(text)
+                return DocumentContainer(document, self.lang, self.iso_standard)
+        document = self.nlp(text)
+        return DocumentContainer(document, self.lang, self.iso_standard)
 
     def _get_lang_from_lang_code(self, lang_code):
         idx = ISO_STANDARDS[self.iso_standard]
