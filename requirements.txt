@@ -1,8 +1,8 @@
-python-magic
-textract==1.5.0
 chardet==3.*
-pycld2
-spacy
 numpy
+pdftotext
+pycld2
+python-magic
 scikit-learn
-nltk
+spacy
+textract==1.5.0
