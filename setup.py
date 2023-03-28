@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="text_miner",
-    version='0.1.1',
+    version='0.2',
     author="Jose Alberto Varona Labrada",
     author_email="jovalab92@gmail.com",
     description="Full text mining utility for extract and pre-process text from documents, incluiding language detection",
@@ -13,14 +13,27 @@ setup(
     data_files=[
         ("", ["LICENSE.txt", "README.md"])
     ],
-    install_requires=['python-magic', 'textract==1.5.0', 'chardet', 'pycld2', 'spacy', 'numpy', 'scikit-learn', 'nltk'],
+    # install_requires=[]
+    # before install pdftotext, poppler should be installed
+    # sudo apt install build-essential libpoppler-cpp-dev pkg-config python3-dev
+    # install_requires=['chardet==3.*', 'numpy', 'pdftotext', 'pycld2',
+    #                   'python-magic', 'scikit-learn', 'spacy', 'textract==1.5.0'],
+    extras_require={
+        'vsm': ['numpy', 'scipy'],
+        'extractor': ['chardet==3.*', 'pdftotext', 'python-magic', 'textract==1.5.0'],
+        'nlp': ['numpy', 'pycld2', 'scikit-learn', 'spacy'],
+        'full': ['chardet==3.*', 'numpy', 'pdftotext', 'pycld2',
+                 'python-magic', 'scikit-learn', 'spacy', 'textract==1.5.0']
+    },
     classifiers=[
         'Development Status :: 3 - Alpha',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ],
     license='MIT',
     keywords=['text mining', 'vectorization', 'text extraction']
