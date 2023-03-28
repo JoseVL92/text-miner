@@ -11,6 +11,11 @@ ALLOWED_EXTENSIONS = ("csv", "doc", "docx", "eml", "epub", "gif", "jpg", "jpeg",
                       "msg", "odt", "pdf", "png", "pptx", "ps", "rtf", "tiff", "txt", "xls", "xlsx")
 
 
+def content_type_to_extensions(content_type):
+    mime_type = content_type.split("; ")[0]
+    return mimetypes.guess_all_extensions(mime_type)
+
+
 def get_content_type(file_path):
     """
     This function return the content type of a file
@@ -29,16 +34,6 @@ def get_content_type(file_path):
     return content_type
 
 
-def content_type_to_extensions(content_type):
-    mime_type = content_type.split("; ")[0]
-    return mimetypes.guess_all_extensions(mime_type)
-
-
-def get_file_extensions(file_path):
-    content_type = get_content_type(file_path)
-    return content_type_to_extensions(content_type)
-
-
 def get_file_encoding(file_path):
     detector = UniversalDetector()
     # for line in open(file_path, 'rb'):
@@ -55,15 +50,9 @@ def get_file_encoding(file_path):
     return detector.result["encoding"]
 
 
-def create_directory(directory_path):
-    """
-    This function validate that exist a directory, if not, then try to create
-    :param directory_path:
-    :return:
-    """
-    if not os.path.exists(directory_path) or not os.path.isdir(directory_path):
-        os.makedirs(directory_path)
-    return True
+def get_file_extensions(file_path):
+    content_type = get_content_type(file_path)
+    return content_type_to_extensions(content_type)
 
 
 def extract_text_from_file(file_path):
