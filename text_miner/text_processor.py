@@ -3,7 +3,7 @@ from collections import Counter, OrderedDict
 import numpy as np
 import pycld2 as cld2
 import spacy
-from nltk.corpus import stopwords
+# from nltk.corpus import stopwords
 from sklearn import preprocessing
 
 ISO_STANDARDS = {"639_1": 0, "639_2/t": 1, "639_2/b": 2}
@@ -208,8 +208,9 @@ class DocumentContainer:
         features = self.get_tokens_property_list(properties, check_attributes=attributes, check_if_false=True)
         # Convert all features to lowercase, because spacy let capitalized words stays intact.
         # Because nltk stopwords definition is more complete than spacy, here we check this.
-        if "is_stop" in attributes:
-            features = [f[:-1] for f in features if f[-1] not in stopwords.words(self.language)]
+        # WE SHOULDN'T INCLUDE THE WHOLE NLTK CORPUS JUST TO USE THE STOPWORDS
+        # if "is_stop" in attributes:
+        #     features = [f[:-1] for f in features if f[-1] not in stopwords.words(self.language)]
 
         if flatten:
             features = [f[0] for f in features]
@@ -270,7 +271,7 @@ class DocumentContainer:
 
 
 class LanguageProcessor:
-    def __init__(self, language=None, language_code=None, light_model=True, iso_standard="639_1"):
+    def __init__(self, language=None, language_code=None, iso_standard="639_1", **nlp_kwargs):
         if language is None and language_code is None:
             raise ValueError("Must specify either language or language_code")
         if ISO_STANDARDS.get(iso_standard) is None:
@@ -287,10 +288,17 @@ class LanguageProcessor:
             self.lang_iso_code = self._get_lang_code_from_lang(language)
 
         # disable_pipes = ("ner", "textcat", "entity_ruler", "merge_entities") if lite_nlp else ()
-        self.nlp = self.make_nlp(light_model=light_model)
+        self.nlp = self.make_nlp(**nlp_kwargs)
 
-    def __call__(self, text, disable_pipes=()):
-        with self.nlp.disable_pipes(*disable_pipes):
+    def __call__(self, text, disable_pipes=None, enable_pipes=None):
+        """
+
+        :param text: Text to process
+        :param disable_pipes: The name(s) of the pipes to disable
+        :param enable_pipes: The name(s) of the pipes to enable - all others will be disabled
+        :return: DocumentContainer
+        """
+        with self.nlp.select_pipes(disable=disable_pipes, enable=enable_pipes):
             document = self.nlp(text)
             return DocumentContainer(document, self.lang, self.iso_standard)
 
@@ -322,13 +330,11 @@ class LanguageProcessor:
                     self.lang))
         if add_pipes is not None and len(add_pipes) > 0:
             for pipe in add_pipes:
-                if callable(pipe):
-                    nlp.add_pipe(pipe)
-                else:
-                    try:
-                        nlp.add_pipe(**pipe)
-                    except:
-                        continue
+                # each pipe should be a dict with add_pipe arguments
+                try:
+                    nlp.add_pipe(**pipe)
+                except:
+                    continue
         if remove_pipes is not None and len(remove_pipes) > 0:
             for pipe in remove_pipes:
                 nlp.remove_pipe(pipe)
